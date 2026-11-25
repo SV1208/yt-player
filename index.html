@@ -176,21 +176,21 @@
     f.referrerPolicy = 'strict-origin-when-cross-origin';
     wrap.appendChild(f);
 
-    var actions = document.createElement('div');
-    actions.className = 'actions';
-    var yt = document.createElement('a');
-    yt.className = 'btn secondary';
-    yt.href = 'https://www.youtube.com/watch?v=' + info.id + (info.start ? '&t=' + info.start : '');
-    yt.target = '_blank';
-    yt.rel = 'noopener';
-    yt.textContent = 'Open on YouTube';
-    actions.appendChild(yt);
+    // var actions = document.createElement('div');
+    // actions.className = 'actions';
+    // var yt = document.createElement('a');
+    // yt.className = 'btn secondary';
+    // yt.href = 'https://www.youtube.com/watch?v=' + info.id + (info.start ? '&t=' + info.start : '');
+    // yt.target = '_blank';
+    // yt.rel = 'noopener';
+    // yt.textContent = 'Open on YouTube';
+    // actions.appendChild(yt);
 
-    player.innerHTML = '';
-    player.appendChild(wrap);
-    player.appendChild(actions);
-    msg.className = '';
-    msg.textContent = 'If it says "Video unavailable", the owner has disabled embedding.';
+    // player.innerHTML = '';
+    // player.appendChild(wrap);
+    // player.appendChild(actions);
+    // msg.className = '';
+    // msg.textContent = 'If it says "Video unavailable", the owner has disabled embedding.';
   }
 
   function go() {
