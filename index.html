@@ -4,225 +4,35 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<title>Cookie-free YouTube player</title>
+<title>YouTube</title>
 <style>
-  :root {
-    color-scheme: light dark;
-    --bg: #f6f7f9;
-    --surface: #ffffff;
-    --text: #1b1f24;
-    --muted: #5d6673;
-    --line: #d5dae1;
-    --accent: #1f5fd6;
-    --accent-text: #ffffff;
-    --warn-bg: #fff4d6;
-    --warn-text: #5a4300;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #14171b;
-      --surface: #1d2127;
-      --text: #e7eaee;
-      --muted: #98a2b0;
-      --line: #323943;
-      --accent: #6aa0ff;
-      --accent-text: #0c1320;
-      --warn-bg: #3a2f10;
-      --warn-text: #f2dca0;
-    }
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    padding: 24px 16px;
-  }
-  main { width: 100%; max-width: 960px; }
-  h1 { font-size: 1.25rem; margin: 0 0 4px; }
-  p.sub { margin: 0 0 16px; color: var(--muted); font-size: .95rem; }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; }
-  input[type="text"] {
-    flex: 1 1 260px;
-    padding: 12px 14px;
-    font: inherit;
-    color: var(--text);
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-  }
-  button, a.btn {
-    padding: 12px 18px;
-    font: inherit;
-    font-weight: 600;
-    color: var(--accent-text);
-    background: var(--accent);
-    border: 0;
-    border-radius: 8px;
-    cursor: pointer;
-    text-decoration: none;
-  }
-  button.secondary, a.btn.secondary {
-    color: var(--text);
-    background: var(--surface);
-    border: 1px solid var(--line);
-    font-weight: 500;
-  }
-  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-  #msg { min-height: 1.5em; margin: 10px 0 0; color: var(--muted); font-size: .92rem; }
-  #msg.error { color: #c62828; }
-  @media (prefers-color-scheme: dark) { #msg.error { color: #ff8a80; } }
-  #player { margin-top: 16px; }
-  .frame {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    background: #000;
-    border-radius: 10px;
-    overflow: hidden;
-  }
-  .frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-  .actions a.btn { padding: 9px 14px; font-size: .92rem; }
-  #fileWarn {
-    display: none;
-    margin-top: 16px;
-    padding: 12px 14px;
-    border-radius: 8px;
-    background: var(--warn-bg);
-    color: var(--warn-text);
-    font-size: .92rem;
-  }
-  #fileWarn code { font-family: ui-monospace, Menlo, Consolas, monospace; }
+  :root { color-scheme: light dark; }
+  body { font: 16px system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 16px; }
+  input { width: 100%; padding: 12px; font: inherit; box-sizing: border-box; }
+  iframe { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; margin-top: 12px; }
 </style>
 </head>
 <body>
-<main>
-  <!-- <h1>Cookie-free YouTube player</h1> -->
-  <!-- <p class="sub">Paste a YouTube link or video ID. Works with watch links, youtu.be, Shorts and live links.</p> -->
-
-  <div class="row">
-    <input id="url" type="text" inputmode="url" autocomplete="off" spellcheck="false"
-           placeholder="https://www.youtube.com/watch?v=..." aria-label="YouTube link or video ID">
-    <button id="go" type="button">Watch</button>
-    <button id="clear" type="button" class="secondary">Clear</button>
-  </div>
-  <p id="msg" role="status"></p>
-
-  <div id="player"></div>
-<!-- 
-  <div id="fileWarn">
-    If the video shows <strong>Error 153</strong> or "Video player configuration error", YouTube is
-    rejecting pages opened straight from disk. Serve this file over http instead: run
-    <code>python3 -m http.server 8000</code> in its folder and open
-    <code>http://localhost:8000/yt-player.html</code>.
-  </div> -->
-</main>
-
+<input id="u" type="text" placeholder="Paste YouTube link or ID" autocomplete="off" autofocus>
+<div id="p"></div>
 <script>
-(function () {
-  var input = document.getElementById('url');
-  var msg = document.getElementById('msg');
-  var player = document.getElementById('player');
+const u = document.getElementById('u'), p = document.getElementById('p');
 
-  function parseStart(str) {
-    if (!str) return 0;
-    if (/^\d+$/.test(str)) return +str;
-    var m = str.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/);
-    return m ? (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0) : 0;
-  }
+function play() {
+  const m = u.value.match(/(?:v=|youtu\.be\/|shorts\/|live\/|embed\/)([\w-]{11})/)
+         || u.value.trim().match(/^([\w-]{11})$/);
+  if (!m) { p.innerHTML = ''; return; }
+  const t = (u.value.match(/[?&](?:t|start)=(\d+)/) || [])[1];
+  p.innerHTML = `<iframe allowfullscreen referrerpolicy="strict-origin-when-cross-origin"
+    allow="autoplay; picture-in-picture; fullscreen; encrypted-media"
+    src="https://www.youtube-nocookie.com/embed/${m[1]}?autoplay=1&rel=0${t ? '&start=' + t : ''}"></iframe>`;
+}
 
-  function parse(raw) {
-    raw = (raw || '').trim();
-    if (!raw) return null;
-    if (/^[\w-]{11}$/.test(raw)) return { id: raw, start: 0 };
+u.addEventListener('input', play);
+u.addEventListener('keydown', e => e.key === 'Enter' && play());
 
-    var u;
-    try { u = new URL(/^[a-z]+:\/\//i.test(raw) ? raw : 'https://' + raw); }
-    catch (e) { return null; }
-
-    var id = null;
-    var host = u.hostname.replace(/^www\./, '');
-    if (host === 'youtu.be') {
-      var a = u.pathname.match(/^\/([\w-]{11})/);
-      id = a && a[1];
-    } else if (/(^|\.)youtube(-nocookie)?\.com$/.test(host)) {
-      var v = u.searchParams.get('v');
-      if (v && /^[\w-]{11}$/.test(v)) id = v;
-      else {
-        var b = u.pathname.match(/^\/(?:shorts|live|embed|v)\/([\w-]{11})/);
-        id = b && b[1];
-      }
-    }
-    if (!id) return null;
-    return { id: id, start: parseStart(u.searchParams.get('t') || u.searchParams.get('start')) };
-  }
-
-  function show(info) {
-    var src = 'https://www.youtube-nocookie.com/embed/' + info.id + '?autoplay=1&rel=0';
-    if (info.start) src += '&start=' + info.start;
-
-    var wrap = document.createElement('div');
-    wrap.className = 'frame';
-    var f = document.createElement('iframe');
-    f.src = src;
-    f.title = 'YouTube video player';
-    f.allow = 'autoplay; picture-in-picture; fullscreen; encrypted-media';
-    f.allowFullscreen = true;
-    f.referrerPolicy = 'strict-origin-when-cross-origin';
-    wrap.appendChild(f);
-
-    // var actions = document.createElement('div');
-    // actions.className = 'actions';
-    // var yt = document.createElement('a');
-    // yt.className = 'btn secondary';
-    // yt.href = 'https://www.youtube.com/watch?v=' + info.id + (info.start ? '&t=' + info.start : '');
-    // yt.target = '_blank';
-    // yt.rel = 'noopener';
-    // yt.textContent = 'Open on YouTube';
-    // actions.appendChild(yt);
-
-    // player.innerHTML = '';
-    // player.appendChild(wrap);
-    // player.appendChild(actions);
-    // msg.className = '';
-    // msg.textContent = 'If it says "Video unavailable", the owner has disabled embedding.';
-  }
-
-  function go() {
-    var info = parse(input.value);
-    if (!info) {
-      msg.className = 'error';
-      msg.textContent = 'That does not look like a YouTube link or video ID.';
-      return;
-    }
-    show(info);
-  }
-
-  function clearAll() {
-    input.value = '';
-    player.innerHTML = '';
-    msg.className = '';
-    msg.textContent = '';
-    input.focus();
-  }
-
-  document.getElementById('go').addEventListener('click', go);
-  document.getElementById('clear').addEventListener('click', clearAll);
-  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); });
-  input.addEventListener('paste', function () { setTimeout(go, 0); });
-
-  // Optional: yt-player.html?yt=LINK_OR_ID
-  var preset = new URLSearchParams(location.search).get('yt');
-  if (preset) { input.value = preset; go(); }
-
-  if (location.protocol === 'file:') document.getElementById('fileWarn').style.display = 'block';
-  input.focus();
-})();
+const q = new URLSearchParams(location.search).get('yt');
+if (q) { u.value = q; play(); }
 </script>
 </body>
 </html>
