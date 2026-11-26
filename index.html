@@ -55,10 +55,13 @@ document.head.appendChild(s);
 
 function parse() {
   const v = u.value.trim();
-  const list = (v.match(/[?&]list=([\w-]+)/) || v.match(/^((?:PL|UU|FL|OL|LL)[\w-]{10,})$/) || [])[1];
+  const raw = (v.match(/[?&]list=([\w-]+)/) || v.match(/^((?:PL|UU|FL|OL|LL)[\w-]{10,})$/) || [])[1];
+  // Only real playlists can be embedded; YouTube "Mix" (RD...) and Watch Later (WL) lists can't
+  const list = /^(PL|UU|FL|OL)[\w-]{10,}$/.test(raw || '') ? raw : undefined;
   const vid = (v.match(/(?:[?&]v=|youtu\.be\/|shorts\/|live\/|embed\/)([\w-]{11})/) || v.match(/^([\w-]{11})$/) || [])[1];
-  const t = (v.match(/[?&](?:t|start)=(\d+)/) || [])[1];
-  return (list || vid) ? { list, vid, t } : null;
+  const tm = v.match(/[?&](?:t|start)=(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?(?:&|#|$)/);
+  const t = tm ? (+tm[1] || 0) * 3600 + (+tm[2] || 0) * 60 + (+tm[3] || 0) : 0;
+  return (list || vid || raw) ? { list, vid, t, mix: !!raw && !list } : null;
 }
 
 function reset() {
@@ -73,6 +76,7 @@ function play() {
   const r = parse();
   reset();
   if (!r) return;
+  if (!r.list && !r.vid) { msg.textContent = "This is a YouTube Mix or Watch Later list, which can't be played here. Paste a video or a regular playlist link."; return; }
   req = r;
 
   const q = new URLSearchParams({ autoplay: 1, rel: 0, playsinline: 1, enablejsapi: 1 });
