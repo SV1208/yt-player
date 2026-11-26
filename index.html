@@ -13,19 +13,33 @@
 </style>
 </head>
 <body>
-<input id="u" type="text" placeholder="Paste YouTube link or ID" autocomplete="off" autofocus>
+<input id="u" type="text" placeholder="Paste YouTube video or playlist link" autocomplete="off" autofocus>
 <div id="p"></div>
 <script>
 const u = document.getElementById('u'), p = document.getElementById('p');
 
 function play() {
-  const m = u.value.match(/(?:v=|youtu\.be\/|shorts\/|live\/|embed\/)([\w-]{11})/)
-         || u.value.trim().match(/^([\w-]{11})$/);
-  if (!m) { p.innerHTML = ''; return; }
-  const t = (u.value.match(/[?&](?:t|start)=(\d+)/) || [])[1];
+  const s = u.value.trim();
+
+  // Playlist ID: from ?list=... or a bare playlist ID
+  const list = (s.match(/[?&]list=([\w-]+)/) || s.match(/^((?:PL|UU|FL|OL|LL)[\w-]{10,})$/) || [])[1];
+
+  // Video ID: watch?v=, youtu.be/, shorts/, live/, embed/ or a bare 11-char ID
+  const vid = (s.match(/(?:[?&]v=|youtu\.be\/|shorts\/|live\/|embed\/)([\w-]{11})/) || s.match(/^([\w-]{11})$/) || [])[1];
+
+  if (!list && !vid) { p.innerHTML = ''; return; }
+
+  const t = (s.match(/[?&](?:t|start)=(\d+)/) || [])[1];
+  const params = new URLSearchParams({ autoplay: 1, rel: 0 });
+  if (list) params.set('list', list);
+  if (t && !list) params.set('start', t);
+
+  // Playlist only -> "videoseries"; video inside a playlist -> start at that video
+  const path = vid ? vid : 'videoseries';
+
   p.innerHTML = `<iframe allowfullscreen referrerpolicy="strict-origin-when-cross-origin"
     allow="autoplay; picture-in-picture; fullscreen; encrypted-media"
-    src="https://www.youtube-nocookie.com/embed/${m[1]}?autoplay=1&rel=0${t ? '&start=' + t : ''}"></iframe>`;
+    src="https://www.youtube-nocookie.com/embed/${path}?${params}"></iframe>`;
 }
 
 u.addEventListener('input', play);
